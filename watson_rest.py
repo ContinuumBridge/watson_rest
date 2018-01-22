@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # flasktest2.py
 from flask import Flask, jsonify, request
 import os
@@ -151,23 +152,12 @@ def checkAuthorised(params):
 def registerButton(params):
     global loginError
     loginError = None
-    status = ""
     print("{}: registerButton, params: {}".format(nicetime(time.time()), params))
     status, org =  checkAuthorised(params)
     if status:
         return status
     mc.login("peter.claydon@continuumbridge.com",  "Mucht00f@r", callback=mcLoginCheck)
-    time.sleep(1)
-    mc.login(params["user"], params["password"], callback=mcLoginCheck)
-    time.sleep(1)
-    print("{}: loginError: {}".format(nicetime(time.time()), loginError))
-    if loginError:
-        status = "Login error: {}".format(loginError)
-        return status
-    mc.logout()
-    time.sleep(0.5)
-    mc.login("peter.claydon@continuumbridge.com",  "Mucht00f@r", callback=mcLoginCheck)
-    time.sleep(1)
+    time.sleep(0.25)
     print("{}: loginError 2: {}".format(nicetime(time.time()), loginError))
     if loginError:
         status = "Authorization problem"
@@ -175,6 +165,7 @@ def registerButton(params):
     time.sleep(1)
     organisation = mc.find_one('organisations', selector={"name": params["org"]})
     print("{}: organisation: {}".format(nicetime(time.time()), organisation))
+    status = ""
     if organisation == None:
         status += "organisation, "
     listName = mc.find_one('lists', selector={"name": params["list"]})
@@ -256,7 +247,7 @@ def deleteButton(params):
     return status
 
 
-@app.route('/api/watson/v1.0', methods=['POST'])
+@app.route('/watson/v1.0', methods=['POST'])
 def doPost():
     if not request.json:
         abort(400)
@@ -287,7 +278,7 @@ def doPost():
     response = {"status": responseString}
     return jsonify(response), 201
 
-@app.route('/api/watson/v1.0', methods=['DELETE'])
+@app.route('/watson/v1.0', methods=['DELETE'])
 def doDelete():
     if not request.json:
         abort(400)
@@ -339,6 +330,6 @@ if __name__ == '__main__':
     mc.connect()
     subscribe()
     context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
-    context.load_cert_chain('/home/petec/bridge_admin/flask/cbclient.pem', '/home/petec/bridge_admin/flask/cbclient.key')
-    app.run(host = '0.0.0.0', port=5005, ssl_context=context)
+    context.load_cert_chain('cbclient.pem', 'cbclient.key')
+    app.run(host = '0.0.0.0', port=443, ssl_context=context)
     app.run()
