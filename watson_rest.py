@@ -130,15 +130,15 @@ def checkAuthorised(params):
         status = "Login error: {}".format(loginError)
         return (status, None)
     time.sleep(0.2)
-    buttons = mc.find('buttons')
-    print("{}: buttons with user login: {}".format(nicetime(time.time()), buttons))
     users = mc.find('users')
-    print("{}: user with user login: {}".format(nicetime(time.time()), users))
+    time.sleep(1) #MS2
+    print("{}: user with login: {}".format(nicetime(time.time()), users))
     if users[0]["emails"][0]["address"] != params["user"]:
         print("{}: wrong user: {}".format(nicetime(time.time()), params["user"]))
         status = "Error, user not authorised"
         return (status, None)
     orgs = mc.find('organisations')
+    time.sleep(1) #MS3
     print("{}: orgs with user login: {}".format(nicetime(time.time()), orgs))
     org = orgs[0]["name"]
     if orgs[0]["name"] != params["org"]:
@@ -162,17 +162,20 @@ def registerButton(params):
     if loginError:
         status = "Authorization problem"
         return status
-    time.sleep(1)
+    time.sleep(2)
+    # trying these grouped and waiting before testing them
     organisation = mc.find_one('organisations', selector={"name": params["org"]})
+    listName = mc.find_one('lists', selector={"name": params["list"]})
+    screenset = mc.find_one('screensets', selector={"name": params["screenset"]})
+    button = mc.find_one('buttons', selector={"id": params["id"]})
+    time.sleep(5) #MS4
     print("{}: organisation: {}".format(nicetime(time.time()), organisation))
     status = ""
     if organisation == None:
         status += "organisation, "
-    listName = mc.find_one('lists', selector={"name": params["list"]})
     print("{}: list: {}".format(nicetime(time.time()), listName))
     if listName == None:
         status += "list name, "
-    screenset = mc.find_one('screensets', selector={"name": params["screenset"]})
     print("{}: screenset: {}".format(nicetime(time.time()), screenset))
     if screenset == None:
         status += "screenset, "
@@ -180,7 +183,6 @@ def registerButton(params):
     if status:
     	status = "Error with " + status[:-2] + " . No action taken"
         return status
-    button = mc.find_one('buttons', selector={"id": params["id"]})
     print("{}: registerButton, find_one, button: {}".format(nicetime(time.time()), button))
     if button == None:
         print("{}: button {} does not exist, creating".format(nicetime(time.time()), params["id"]))

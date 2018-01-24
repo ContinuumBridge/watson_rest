@@ -20,7 +20,8 @@ case "$1" in
   start)
         echo -n "Starting watson_rest: "
         cd /home/ubuntu/watson_rest
-        setuid ubuntu ./watson_rest.py >> '/home/ubuntu/watson_rest/shell.log' 2>&1 &
+        #setuid ubuntu ./watson_rest.py >> '/home/ubuntu/watson_rest/shell.log' 2>&1 &
+        ./watson_rest.py >> '/home/ubuntu/watson_rest/shell.log' 2>&1 &
         #su -l ubuntu -c "/home/ubuntu/watson_rest/watson_rest.py >> /home/ubuntu/watson_rest/shell.log 2>&1 &"
         #su -l ubuntu -c "/home/ubuntu/watson_rest/watson_rest >> /dev/null 2>&1 &"
         sch_pid=$!
