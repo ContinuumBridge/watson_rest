@@ -9,6 +9,7 @@ from subprocess import check_output
 import ssl
 from MeteorClient import MeteorClient
 import datetime
+import threading
 
 buttonID                = ""
 config                  = {}
@@ -38,6 +39,7 @@ def onButtonChange(buttonID, fields):
 
 def mcConnected():
     print("{}: Meteor client connected".format(nicetime(time.time())))
+    event.set()
 
 def mcLoggedIn(data):
     pass
@@ -59,9 +61,11 @@ def subscribe():
         mc.subscribe("screensets", callback=mcSubscribeCallback)
         mc.subscribe("organisations", callback=mcSubscribeCallback)
     	print("{}: Subscribied".format(nicetime(time.time())))
+        event.set()
         return True
     except Exception as ex:
         print("mcLoggedIn. Already subscribed, exception type {}, exception: {}".format(type(ex), ex.args))
+        event.set()
         return  False
 
 def unsubscribe():
@@ -83,14 +87,25 @@ def mcLoggingIn():
 
 def mcLoggedOut():
     print("{}: Logged out".format(nicetime(time.time())))
+    event.set()
+    return
 
 def mcLoginCheck(error, login):
     global loginError
     loginError = error
     print("{}: mcLoginCheck. Error: {}, login: {}".format(nicetime(time.time()), error, login))
+    event.set()
+    return
 
 def mcSubscribed(subscription):
     print("{}: Subscribed: ".format(subscription))
+    event.set()
+    return
+
+def mcFound():
+    print("{}: Found: ".format(subscription))
+    event.set()
+    return
 
 def mcSubscribeCallback(error):
     if error != None:
@@ -123,22 +138,26 @@ def mcRemoved(collection, id):
 def checkAuthorised(params):
     global loginError
     loginError = None
+    event.clear()
     mc.login(params["user"], params["password"], callback=mcLoginCheck)
-    time.sleep(1)
+    event.wait()
+    event.clear()
     print("{}: loginError: {}".format(nicetime(time.time()), loginError))
     if loginError:
         status = "Login error: {}".format(loginError)
         return (status, None)
-    time.sleep(0.2)
-    users = mc.find('users')
-    time.sleep(1) #MS2
+    event.clear()
+    users = mc.find('users', callback=mcFound)
+    event.wait()
+    event.clear()
     print("{}: user with login: {}".format(nicetime(time.time()), users))
     if users[0]["emails"][0]["address"] != params["user"]:
         print("{}: wrong user: {}".format(nicetime(time.time()), params["user"]))
         status = "Error, user not authorised"
         return (status, None)
-    orgs = mc.find('organisations')
-    time.sleep(1) #MS3
+    orgs = mc.find('organisations', callback=mcFound)
+    event.wait()
+    event.clear()
     print("{}: orgs with user login: {}".format(nicetime(time.time()), orgs))
     org = orgs[0]["name"]
     if orgs[0]["name"] != params["org"]:
@@ -146,7 +165,8 @@ def checkAuthorised(params):
         status = "Error, user not in organisation"
         return (status, None)
     mc.logout()
-    time.sleep(0.5)
+    event.wait()
+    event.clear()
     return (None, org)
 
 def registerButton(params):
@@ -156,19 +176,19 @@ def registerButton(params):
     status, org =  checkAuthorised(params)
     if status:
         return status
+    event.clear()
     mc.login("peter.claydon@continuumbridge.com",  "Mucht00f@r", callback=mcLoginCheck)
-    time.sleep(0.25)
+    event.wait()
+    event.clear()
     print("{}: loginError 2: {}".format(nicetime(time.time()), loginError))
     if loginError:
         status = "Authorization problem"
         return status
-    time.sleep(2)
     # trying these grouped and waiting before testing them
     organisation = mc.find_one('organisations', selector={"name": params["org"]})
     listName = mc.find_one('lists', selector={"name": params["list"]})
     screenset = mc.find_one('screensets', selector={"name": params["screenset"]})
     button = mc.find_one('buttons', selector={"id": params["id"]})
-    time.sleep(5) #MS4
     print("{}: organisation: {}".format(nicetime(time.time()), organisation))
     status = ""
     if organisation == None:
@@ -329,8 +349,13 @@ if __name__ == '__main__':
     mc.on('changed', mcChanged)
     mc.on('removed', mcRemoved)
     print("{}: Connecting".format(nicetime(time.time())))
+    event = threading.Event()
     mc.connect()
+    event.wait()
+    event.clear()
     subscribe()
+    event.wait()
+    event.clear()
     context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
     context.load_cert_chain('cbclient.pem', 'cbclient.key')
     app.run(host = '0.0.0.0', port=443, ssl_context=context)
