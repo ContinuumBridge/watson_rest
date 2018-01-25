@@ -102,28 +102,29 @@ def mcSubscribed(subscription):
     event.set()
     return
 
-def mcFound():
-    print("{}: Found: ".format(subscription))
-    event.set()
-    return
-
 def mcSubscribeCallback(error):
     if error != None:
         print("{}: Meteor client subscribe error: {}".format(nicetime(time.time()), error))
 
 def mcInsertCallback(error, data):
+    event.set()
     if error:
         print("{}: Insert error,  data: {}, error: {}".format(nicetime(time.time()), data, error))
+    return
 
 def mcUpdateCallback(error, data):
+    event.set()
     if error != None:
         print("{}: Update error: {}".format(nicetime(time.time()), error))
         print("{}: Update error data: {}".format(nicetime(time.time()), data))
+    return
 
 def mcRemoveCallback(error, data):
+    event.set()
     if error != None:
         print("{}: Update error: {}".format(nicetime(time.time()), error))
         print("{}: Update error data: {}".format(nicetime(time.time()), data))
+    return
 
 def mcAdded(collection, id, fields):
     pass
@@ -147,17 +148,13 @@ def checkAuthorised(params):
         status = "Login error: {}".format(loginError)
         return (status, None)
     event.clear()
-    users = mc.find('users', callback=mcFound)
-    event.wait()
-    event.clear()
+    users = mc.find('users')
     print("{}: user with login: {}".format(nicetime(time.time()), users))
     if users[0]["emails"][0]["address"] != params["user"]:
         print("{}: wrong user: {}".format(nicetime(time.time()), params["user"]))
         status = "Error, user not authorised"
         return (status, None)
-    orgs = mc.find('organisations', callback=mcFound)
-    event.wait()
-    event.clear()
+    orgs = mc.find('organisations')
     print("{}: orgs with user login: {}".format(nicetime(time.time()), orgs))
     org = orgs[0]["name"]
     if orgs[0]["name"] != params["org"]:
@@ -207,6 +204,7 @@ def registerButton(params):
     if button == None:
         print("{}: button {} does not exist, creating".format(nicetime(time.time()), params["id"]))
         status = "button {} does not exist".format(params["id"])
+        event.clear()
         mc.insert("buttons", {
             #"organisationId": organisation["_id"],
             "screensetId": screenset["_id"], 
@@ -217,9 +215,11 @@ def registerButton(params):
             "listDefault": True,
             "createdAt": datetime.datetime.utcnow() 
         }, callback=mcInsertCallback)
+        event.wait()
         status = "OK - Created new button"
     else:
         print("{}: Button exists, updating: {}".format(nicetime(time.time()), button))
+        event.clear()
         mc.update("buttons", {"_id": button["_id"]}, \
             {"$set": {
                 #"organisationId": organisation["_id"],
@@ -230,6 +230,7 @@ def registerButton(params):
                 "enabled": False,
                 "listDefault": True
             }}, callback=mcUpdateCallback)
+        event.wait()
         status = "OK - Updated existing button"
     return status
 
@@ -242,13 +243,13 @@ def deleteButton(params):
     print("{}: deleteButton authorised org: {}".format(nicetime(time.time()), org))
     if status:
         return status
+    event.clear()
     mc.login("peter.claydon@continuumbridge.com",  "Mucht00f@r", callback=mcLoginCheck)
-    time.sleep(1)
+    event.wait()
     print("{}: loginError 2: {}".format(nicetime(time.time()), loginError))
     if loginError:
         status = "Authorization problem"
         return status
-    time.sleep(1)
     button = mc.find_one('buttons', selector={"id": params["id"]})
     print("{}: button {}".format(nicetime(time.time()), button))
     if button == None:
@@ -263,7 +264,9 @@ def deleteButton(params):
         if buttonOrg["name"] != org:
             status = "Error, the button does not belong to your organisation"
             return status
+    	event.clear()
         mc.remove('buttons', selector={"_id": button["_id"]}, callback=mcRemoveCallback)
+    	event.wait()
         print("{}: removed button {}".format(nicetime(time.time()), params["id"]))
         status = "OK - Removed button"
     return status
@@ -295,8 +298,9 @@ def doPost():
     	responseString = "Error: no " + responseString[:-2] + " in request. No action taken"
     else:
         responseString = registerButton(params)
-    time.sleep(1)
+    event.clear()
     mc.logout()
+    event.wait()
     response = {"status": responseString}
     return jsonify(response), 201
 
@@ -318,8 +322,9 @@ def doDelete():
     	responseString = "Error: no " + responseString[:-2] + " in request. No action taken"
     else:
         responseString = deleteButton(params)
-    time.sleep(1)
+    event.clear()
     mc.logout()
+    event.wait()
     response = {"status": responseString}
     return jsonify(response), 201
 
