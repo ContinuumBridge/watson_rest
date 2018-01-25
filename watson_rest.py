@@ -150,7 +150,7 @@ def checkAuthorised(params):
     event.clear()
     users = mc.find('users')
     print("{}: user with login: {}".format(nicetime(time.time()), users))
-    if users[0]["emails"][0]["address"] != params["user"]:
+    if users[0]["emails"][0]["address"].lower() != params["user"].lower():
         print("{}: wrong user: {}".format(nicetime(time.time()), params["user"]))
         status = "Error, user not authorised"
         return (status, None)
@@ -275,7 +275,8 @@ def deleteButton(params):
 @app.route('/watson/v1.0', methods=['POST'])
 def doPost():
     if not request.json:
-        abort(400)
+    	response = {"status": "Error, request needs to be Content-Type: application/json"}
+    	return jsonify(response), 400
     params = request.json
     print("Post request: {}".format(params))
     responseString = ""
@@ -307,7 +308,8 @@ def doPost():
 @app.route('/watson/v1.0', methods=['DELETE'])
 def doDelete():
     if not request.json:
-        abort(400)
+    	response = {"status": "Error, request needs to be Content-Type: application/json"}
+    	return jsonify(response), 400
     params = request.json
     print("Post request: {}".format(params))
     responseString = ""
