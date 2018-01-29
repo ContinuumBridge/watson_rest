@@ -341,7 +341,36 @@ def doDelete():
     response = {"status": responseString}
     return jsonify(response), 200
 
+@app.route('/watson/v1.0', methods=['PATCH'])
+def docwPatchDelete():
+    if not request.json:
+    	response = {"status": "Error, request needs to be Content-Type: application/json"}
+    	return jsonify(response), 400
+    params = request.json
+    print("Patch request: {}".format(params))
     responseString = ""
+    if not "id" in params and not "name" in params:
+        responseString += "id or name, "
+    if "function" in params:
+        if params["function"] != "delete":
+            responseString += "delete function, "
+    else:
+        responseString += "function, "
+    if not "user" in params:
+        responseString += "user, "
+    if not "password" in params:
+        responseString += "password, "
+    print("{}: responseString: {}".format(nicetime(time.time()), responseString))
+    if responseString != "":
+    	responseString = "Error: no " + responseString[:-2] + " in request. No action taken"
+    else:
+        responseString = deleteButton(params)
+    event.clear()
+    mc.logout()
+    event.wait()
+    response = {"status": responseString}
+    return jsonify(response), 200
+
 if __name__ == '__main__':
     try:
         s = check_output(["git", "status"])
