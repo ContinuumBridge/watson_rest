@@ -250,7 +250,18 @@ def deleteButton(params):
     if loginError:
         status = "Authorization problem"
         return status
-    button = mc.find_one('buttons', selector={"id": params["id"]})
+    if "id" in params:
+    	button = mc.find_one('buttons', selector={"id": params["id"]})
+        if button == None:
+            print("{}: button {} does not exist, unable to delete".format(nicetime(time.time()), params["id"]))
+            status = "Button {} does not exist, unable to delete".format(params["id"])
+            return status
+    elif "name" in params:
+    	button = mc.find_one('buttons', selector={"name": params["name"]})
+        if button == None:
+            print("{}: button {} does not exist, unable to delete".format(nicetime(time.time()), params["name"]))
+            status = "Button {} does not exist, unable to delete".format(params["name"])
+            return status
     print("{}: button {}".format(nicetime(time.time()), button))
     if button == None:
         print("{}: button {} does not exist, unable to delete".format(nicetime(time.time()), params["id"]))
@@ -267,7 +278,7 @@ def deleteButton(params):
     	event.clear()
         mc.remove('buttons', selector={"_id": button["_id"]}, callback=mcRemoveCallback)
     	event.wait()
-        print("{}: removed button {}".format(nicetime(time.time()), params["id"]))
+        print("{}: removed button".format(nicetime(time.time())))
         status = "OK - Removed button"
     return status
 
@@ -303,7 +314,7 @@ def doPost():
     mc.logout()
     event.wait()
     response = {"status": responseString}
-    return jsonify(response), 201
+    return jsonify(response), 200
 
 @app.route('/watson/v1.0', methods=['DELETE'])
 def doDelete():
@@ -313,8 +324,8 @@ def doDelete():
     params = request.json
     print("Post request: {}".format(params))
     responseString = ""
-    if not "id" in params:
-        responseString += "id, "
+    if not "id" in params and not "name" in params:
+        responseString += "id or name, "
     if not "user" in params:
         responseString += "user, "
     if not "password" in params:
@@ -328,7 +339,7 @@ def doDelete():
     mc.logout()
     event.wait()
     response = {"status": responseString}
-    return jsonify(response), 201
+    return jsonify(response), 200
 
     responseString = ""
 if __name__ == '__main__':
