@@ -264,14 +264,22 @@ def deleteButton(params):
             return status
     print("{}: button {}".format(nicetime(time.time()), button))
     if button == None:
-        print("{}: button {} does not exist, unable to delete".format(nicetime(time.time()), params["id"]))
-        status = "Button {} does not exist, unable to delete".format(params["id"])
+        print("{}: button does not exist, unable to delete".format(nicetime(time.time())))
+        status = "Button does not exist, unable to delete"
         return status
     else:
-        listName = mc.find_one('lists', selector={"_id": button["listId"]})
-        print("{}: list: {}".format(nicetime(time.time()), listName))
-        buttonOrg = mc.find_one('organisations', selector={"_id": listName["organisationId"]})
-        print("{}: org: {}".format(nicetime(time.time()), buttonOrg["name"]))
+        if "organisationId" in button:
+            buttonOrg = mc.find_one('organisations', selector={"_id": button["organisationId"]})
+            print("{}: org from button: {}".format(nicetime(time.time()), buttonOrg["name"]))
+        elif "listId" in button:
+            listName = mc.find_one('lists', selector={"_id": button["listId"]})
+            print("{}: list: {}".format(nicetime(time.time()), listName))
+            buttonOrg = mc.find_one('organisations', selector={"_id": listName["organisationId"]})
+            print("{}: org from listId: {}".format(nicetime(time.time()), buttonOrg["name"]))
+        else:
+            print("{}: Cannot verify organisation for button, unable to delete".format(nicetime(time.time())))
+            status = "Cannot verify organisation for button,  unable to delete"
+            return
         if buttonOrg["name"] != org:
             status = "Error, the button does not belong to your organisation"
             return status
@@ -342,7 +350,7 @@ def doDelete():
     return jsonify(response), 200
 
 @app.route('/watson/v1.0', methods=['PATCH'])
-def docwPatchDelete():
+def doPatchDelete():
     if not request.json:
     	response = {"status": "Error, request needs to be Content-Type: application/json"}
     	return jsonify(response), 400
