@@ -108,6 +108,7 @@ def mcSubscribeCallback(error):
 
 def mcInsertCallback(error, data):
     event.set()
+    print("{}: mcInsertCallback, data: {}".format(nicetime(time.time()), data))
     if error:
         print("{}: Insert error,  data: {}, error: {}".format(nicetime(time.time()), data, error))
     return
@@ -181,17 +182,34 @@ def registerButton(params):
     if loginError:
         status = "Authorization problem"
         return status
-    # trying these grouped and waiting before testing them
     organisation = mc.find_one('organisations', selector={"name": params["org"]})
-    listName = mc.find_one('lists', selector={"name": params["list"]})
+    listData = None
+    lists = mc.find('lists', selector={"name": params["list"]})
+    for l in lists:
+        if l["organisationId"] == organisation["_id"]:
+            listData = l
+            break
+    print("{}: listData: {}".format(nicetime(time.time()), listData))
+    if listData == None:  # If there is no list in the organisation of the given name, create a new list 
+        print("{}: No list of this name for organisation, creating new list".format(nicetime(time.time())))
+        event.clear()
+        mc.insert("lists", {
+            "name": params["list"],
+            "organisationId": organisation["_id"]
+        }, callback=mcInsertCallback)
+        event.wait()
+        listData = mc.find_one('lists', selector={"name": params["list"], "organisationId": organisation["_id"]})
+        print("{}: listData for new list: {}".format(nicetime(time.time()), listData))
+        newList = True
+    else:
+        newList = False
     screenset = mc.find_one('screensets', selector={"name": params["screenset"]})
     button = mc.find_one('buttons', selector={"id": params["id"]})
     print("{}: organisation: {}".format(nicetime(time.time()), organisation))
     status = ""
     if organisation == None:
         status += "organisation, "
-    print("{}: list: {}".format(nicetime(time.time()), listName))
-    if listName == None:
+    if listData == None:
         status += "list name, "
     print("{}: screenset: {}".format(nicetime(time.time()), screenset))
     if screenset == None:
@@ -208,7 +226,7 @@ def registerButton(params):
         mc.insert("buttons", {
             #"organisationId": organisation["_id"],
             "screensetId": screenset["_id"], 
-            "listId": listName["_id"],
+            "listId": listData["_id"],
             "name": params["name"],
             "id": params["id"],
             "enabled": False,
@@ -216,7 +234,10 @@ def registerButton(params):
             "createdAt": datetime.datetime.utcnow() 
         }, callback=mcInsertCallback)
         event.wait()
-        status = "OK - Created new button"
+        if newList:
+            status = "OK - Created new list and new button"
+        else:
+            status = "OK - Created new button"
     else:
         print("{}: Button exists, updating: {}".format(nicetime(time.time()), button))
         event.clear()
@@ -224,7 +245,7 @@ def registerButton(params):
             {"$set": {
                 #"organisationId": organisation["_id"],
                 "screensetId": screenset["_id"], 
-                "listId": listName["_id"],
+                "listId": listData["_id"],
                 "name": params["name"],
                 "id": params["id"],
                 "enabled": False,
